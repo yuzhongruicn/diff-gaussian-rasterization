@@ -74,6 +74,7 @@ class _RasterizeGaussians(torch.autograd.Function):
             raster_settings.image_width,
             sh,
             raster_settings.sh_degree,
+            raster_settings.max_sh_degree,
             raster_settings.campos,
             raster_settings.prefiltered,
             raster_settings.debug
@@ -83,22 +84,23 @@ class _RasterizeGaussians(torch.autograd.Function):
         if raster_settings.debug:
             cpu_args = cpu_deep_copy_tuple(args) # Copy them before they can be corrupted
             try:
-                num_rendered, color, radii, geomBuffer, binningBuffer, imgBuffer = _C.rasterize_gaussians(*args)
+                num_rendered, color, radii, geomBuffer, binningBuffer, imgBuffer, rendered_feat = _C.rasterize_gaussians(*args)
             except Exception as ex:
                 torch.save(cpu_args, "snapshot_fw.dump")
                 print("\nAn error occured in forward. Please forward snapshot_fw.dump for debugging.")
                 raise ex
         else:
-            num_rendered, color, radii, geomBuffer, binningBuffer, imgBuffer = _C.rasterize_gaussians(*args)
+            num_rendered, color, radii, geomBuffer, binningBuffer, imgBuffer, rendered_feat = _C.rasterize_gaussians(*args)
 
+        print('sh:', sh.shape)
         # Keep relevant tensors for backward
         ctx.raster_settings = raster_settings
         ctx.num_rendered = num_rendered
         ctx.save_for_backward(colors_precomp, means3D, scales, rotations, cov3Ds_precomp, radii, sh, geomBuffer, binningBuffer, imgBuffer)
-        return color, radii
+        return color, radii, rendered_feat
 
     @staticmethod
-    def backward(ctx, grad_out_color, _):
+    def backward(ctx, grad_out_color, _, grad_feat):
 
         # Restore necessary values from context
         num_rendered = ctx.num_rendered
@@ -140,6 +142,7 @@ class _RasterizeGaussians(torch.autograd.Function):
         else:
              grad_means2D, grad_colors_precomp, grad_opacities, grad_means3D, grad_cov3Ds_precomp, grad_sh, grad_scales, grad_rotations = _C.rasterize_gaussians_backward(*args)
 
+        # backward grads的回传和forward的输入一一对应    
         grads = (
             grad_means3D,
             grad_means2D,
@@ -164,6 +167,7 @@ class GaussianRasterizationSettings(NamedTuple):
     viewmatrix : torch.Tensor
     projmatrix : torch.Tensor
     sh_degree : int
+    max_sh_degree : int
     campos : torch.Tensor
     prefiltered : bool
     debug : bool

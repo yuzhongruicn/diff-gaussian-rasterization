@@ -30,6 +30,9 @@ namespace cg = cooperative_groups;
 #include "forward.h"
 #include "backward.h"
 
+#include <torch/torch.h>
+#include <cstdio>
+
 // Helper function to find the next-highest bit of the MSB
 // on the CPU.
 uint32_t getHigherMsb(uint32_t n)
@@ -216,6 +219,8 @@ int CudaRasterizer::Rasterizer::forward(
 	const float tan_fovx, float tan_fovy,
 	const bool prefiltered,
 	float* out_color,
+	float* rendered_feat,
+	const int feat_dim,
 	int* radii,
 	bool debug)
 {
@@ -330,7 +335,10 @@ int CudaRasterizer::Rasterizer::forward(
 		imgState.accum_alpha,
 		imgState.n_contrib,
 		background,
-		out_color), debug)
+		out_color,
+		shs,
+		rendered_feat,
+		feat_dim), debug)
 
 	return num_rendered;
 }

@@ -14,8 +14,8 @@
 #include <cstdio>
 #include <tuple>
 #include <string>
-	
-std::tuple<int, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
+
+std::tuple<int, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
 RasterizeGaussiansCUDA(
 	const torch::Tensor& background,
 	const torch::Tensor& means3D,
@@ -33,6 +33,7 @@ RasterizeGaussiansCUDA(
     const int image_width,
 	const torch::Tensor& sh,
 	const int degree,
+	const int max_sh_degree,
 	const torch::Tensor& campos,
 	const bool prefiltered,
 	const bool debug);
