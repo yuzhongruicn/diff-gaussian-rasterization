@@ -92,7 +92,7 @@ class _RasterizeGaussians(torch.autograd.Function):
         else:
             num_rendered, color, radii, geomBuffer, binningBuffer, imgBuffer, rendered_feat = _C.rasterize_gaussians(*args)
 
-        print('sh:', sh.shape)
+        # print('sh:', sh.shape)
         # Keep relevant tensors for backward
         ctx.raster_settings = raster_settings
         ctx.num_rendered = num_rendered

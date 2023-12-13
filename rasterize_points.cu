@@ -70,7 +70,7 @@ RasterizeGaussiansCUDA(
   torch::Tensor radii = torch::full({P}, 0, means3D.options().dtype(torch::kInt32));
   const int feat_dim = 3*pow((max_sh_degree+1), 2);
 //   torch::Tensor rendered_feat = torch::full({feat_dim, H, W}, 0.0, float_opts);
-  torch::Tensor rendered_feat = torch::full({1, H, W}, 0.0, float_opts);
+  torch::Tensor rendered_feat = torch::full({feat_dim, H, W}, 0.0, float_opts);
   
   torch::Device device(torch::kCUDA);
   torch::TensorOptions options(torch::kByte);
@@ -113,7 +113,6 @@ RasterizeGaussiansCUDA(
 		prefiltered,
 		out_color.contiguous().data<float>(),
 		rendered_feat.contiguous().data<float>(),
-		feat_dim,
 		radii.contiguous().data<int>(),
 		debug);
   }

@@ -61,8 +61,7 @@ namespace FORWARD
 		const float* bg_color,
 		float* out_color,
 		const float* shs,
-		float* rendered_feat,
-		int feat_dim);
+		float* rendered_feat);
 }
 
 
