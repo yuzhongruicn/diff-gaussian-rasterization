@@ -258,7 +258,7 @@ __global__ void preprocessCUDA(int P, int D, int M,
 // Main rasterization method. Collaboratively works on one tile per
 // block, each thread treats one pixel. Alternates between fetching 
 // and rasterizing data.
-template <uint32_t CHANNELS, uint32_t DIM>
+template <uint32_t CHANNELS>
 __global__ void __launch_bounds__(BLOCK_X * BLOCK_Y)
 renderCUDA(
 	const uint2* __restrict__ ranges,
@@ -270,9 +270,7 @@ renderCUDA(
 	float* __restrict__ final_T,
 	uint32_t* __restrict__ n_contrib,
 	const float* __restrict__ bg_color,
-	float* __restrict__ out_color,
-	const float* __restrict__ shs,
-	float* __restrict__ rendered_feat
+	float* __restrict__ out_color
 	)
 {
 	// Identify current tile and associated min/max pixel range.
@@ -298,14 +296,13 @@ renderCUDA(
 	__shared__ int collected_id[BLOCK_SIZE];
 	__shared__ float2 collected_xy[BLOCK_SIZE];
 	__shared__ float4 collected_conic_opacity[BLOCK_SIZE];
-	__shared__ float collected_shs[BLOCK_SIZE];
 
 	// Initialize helper variables
 	float T = 1.0f;
 	uint32_t contributor = 0;
 	uint32_t last_contributor = 0;
 	float C[CHANNELS] = { 0 };
-	float F[3*DIM] = { 0.0f };
+	// float F[3*DIM] = { 0.0f };
 	// float F = 0.0f;
 
 	// Iterate over batches until all done or range is complete
@@ -324,7 +321,7 @@ renderCUDA(
 			collected_id[block.thread_rank()] = coll_id;
 			collected_xy[block.thread_rank()] = points_xy_image[coll_id];
 			collected_conic_opacity[block.thread_rank()] = conic_opacity[coll_id];
-			collected_shs[block.thread_rank()] = shs[coll_id];
+			// collected_shs[block.thread_rank()] = shs[coll_id];
 		}
 		block.sync();
 
@@ -361,8 +358,8 @@ renderCUDA(
 			for (int ch = 0; ch < CHANNELS; ch++)
 				C[ch] += features[collected_id[j] * CHANNELS + ch] * alpha * T;
 
-			for (int dim = 0; dim < 3*DIM; dim++)
-					F[dim] += shs[collected_id[j] * 3 * DIM + dim] * alpha * T;
+			// for (int dim = 0; dim < 3*DIM; dim++)
+			// 		F[dim] += shs[collected_id[j] * 3 * DIM + dim] * alpha * T;
 
 			T = test_T;
 
@@ -380,8 +377,8 @@ renderCUDA(
 		n_contrib[pix_id] = last_contributor;
 		for (int ch = 0; ch < CHANNELS; ch++)
 			out_color[ch * H * W + pix_id] = C[ch] + T * bg_color[ch];
-		for (int dim = 0; dim < 3*DIM; dim++)
-			rendered_feat[dim * H * W + pix_id] = F[dim];
+		// for (int dim = 0; dim < 3*DIM; dim++)
+		// 	rendered_feat[dim * H * W + pix_id] = F[dim];
 	}
 }
 
@@ -396,11 +393,9 @@ void FORWARD::render(
 	float* final_T,
 	uint32_t* n_contrib,
 	const float* bg_color,
-	float* out_color,
-	const float* shs,
-	float* rendered_feat)
+	float* out_color)
 {
-	renderCUDA<NUM_CHANNELS, FEAT_DIM> << <grid, block >> > (
+	renderCUDA<NUM_CHANNELS> << <grid, block >> > (
 		ranges,
 		point_list,
 		W, H,
@@ -410,9 +405,7 @@ void FORWARD::render(
 		final_T,
 		n_contrib,
 		bg_color,
-		out_color,
-		shs,
-		rendered_feat);
+		out_color);
 }
 
 void FORWARD::preprocess(int P, int D, int M,

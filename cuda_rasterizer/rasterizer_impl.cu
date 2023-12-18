@@ -30,9 +30,6 @@ namespace cg = cooperative_groups;
 #include "forward.h"
 #include "backward.h"
 
-#include <torch/torch.h>
-#include <cstdio>
-
 // Helper function to find the next-highest bit of the MSB
 // on the CPU.
 uint32_t getHigherMsb(uint32_t n)
@@ -219,7 +216,7 @@ int CudaRasterizer::Rasterizer::forward(
 	const float tan_fovx, float tan_fovy,
 	const bool prefiltered,
 	float* out_color,
-	float* rendered_feat,
+	// float* rendered_feat,
 	int* radii,
 	bool debug)
 {
@@ -323,7 +320,7 @@ int CudaRasterizer::Rasterizer::forward(
 
 	// Let each tile blend its range of Gaussians independently in parallel
 	const float* feature_ptr = colors_precomp != nullptr ? colors_precomp : geomState.rgb;
-	const float* shs_ptr = shs;
+	// const float* shs_ptr = shs;
 	CHECK_CUDA(FORWARD::render(
 		tile_grid, block,
 		imgState.ranges,
@@ -335,9 +332,7 @@ int CudaRasterizer::Rasterizer::forward(
 		imgState.accum_alpha,
 		imgState.n_contrib,
 		background,
-		out_color,
-		shs_ptr,
-		rendered_feat), debug)
+		out_color), debug)
 
 	return num_rendered;
 }

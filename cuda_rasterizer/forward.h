@@ -59,9 +59,7 @@ namespace FORWARD
 		float* final_T,
 		uint32_t* n_contrib,
 		const float* bg_color,
-		float* out_color,
-		const float* shs,
-		float* rendered_feat);
+		float* out_color);
 }
 
 
