@@ -266,11 +266,14 @@ renderCUDA(
 	int W, int H,
 	const float2* __restrict__ points_xy_image,
 	const float* __restrict__ features,
+	const float* __restrict__ depths,
 	const float4* __restrict__ conic_opacity,
-	float* __restrict__ final_T,
+	// float* __restrict__ final_T,
+	float* __restrict__ out_alpha,
 	uint32_t* __restrict__ n_contrib,
 	const float* __restrict__ bg_color,
-	float* __restrict__ out_color
+	float* __restrict__ out_color,
+	float* __restrict__ out_depth
 	)
 {
 	// Identify current tile and associated min/max pixel range.
@@ -302,8 +305,8 @@ renderCUDA(
 	uint32_t contributor = 0;
 	uint32_t last_contributor = 0;
 	float C[CHANNELS] = { 0 };
-	// float F[3*DIM] = { 0.0f };
-	// float F = 0.0f;
+	float weight = 0;
+	float D = 0;
 
 	// Iterate over batches until all done or range is complete
 	for (int i = 0; i < rounds; i++, toDo -= BLOCK_SIZE)
@@ -360,6 +363,8 @@ renderCUDA(
 
 			// for (int dim = 0; dim < 3*DIM; dim++)
 			// 		F[dim] += shs[collected_id[j] * 3 * DIM + dim] * alpha * T;
+			weight += alpha * T;
+			D += depths[collected_id[j]] * alpha * T;
 
 			T = test_T;
 
@@ -373,10 +378,12 @@ renderCUDA(
 	// rendering data to the frame and auxiliary buffers.
 	if (inside)
 	{
-		final_T[pix_id] = T;
+		// final_T[pix_id] = T;
 		n_contrib[pix_id] = last_contributor;
 		for (int ch = 0; ch < CHANNELS; ch++)
 			out_color[ch * H * W + pix_id] = C[ch] + T * bg_color[ch];
+		out_alpha[pix_id] = weight;
+		out_depth[pix_id] = D;
 		// for (int dim = 0; dim < 3*DIM; dim++)
 		// 	rendered_feat[dim * H * W + pix_id] = F[dim];
 	}
@@ -389,11 +396,14 @@ void FORWARD::render(
 	int W, int H,
 	const float2* means2D,
 	const float* colors,
+	const float* depths,
 	const float4* conic_opacity,
-	float* final_T,
+	// float* final_T,
+	float* out_alpha,
 	uint32_t* n_contrib,
 	const float* bg_color,
-	float* out_color)
+	float* out_color,
+	float* out_depth)
 {
 	renderCUDA<NUM_CHANNELS> << <grid, block >> > (
 		ranges,
@@ -401,11 +411,14 @@ void FORWARD::render(
 		W, H,
 		means2D,
 		colors,
+		depths,
 		conic_opacity,
-		final_T,
+		// final_T,
+		out_alpha,
 		n_contrib,
 		bg_color,
-		out_color);
+		out_color,
+		out_depth);
 }
 
 void FORWARD::preprocess(int P, int D, int M,
